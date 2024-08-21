@@ -34,6 +34,7 @@ class OpenvinoConan(ConanFile):
         # HW plugins
         "enable_cpu": [True, False],
         "enable_gpu": [True, False],
+        "enable_npu": [True, False],
         # SW plugins
         "enable_auto": [True, False],
         "enable_hetero": [True, False],
@@ -52,6 +53,7 @@ class OpenvinoConan(ConanFile):
         # HW plugins
         "enable_cpu": True,
         "enable_gpu": True,
+        "enable_npu": True,
         # SW plugins
         "enable_auto": True,
         "enable_hetero": True,
@@ -126,15 +128,22 @@ class OpenvinoConan(ConanFile):
         return not hasattr(self, "settings_build")
 
     def source(self):
-        get(self, **self.conan_data["sources"][self.version]["openvino"], strip_root=True)
-        get(self, **self.conan_data["sources"][self.version]["onednn_cpu"], strip_root=True,
+        version_data = self.conan_data["sources"][self.version]
+        get(self, **version_data["openvino"], strip_root=True)
+        get(self, **version_data["onednn_cpu"], strip_root=True,
             destination=f"{self.source_folder}/src/plugins/intel_cpu/thirdparty/onednn")
-        get(self, **self.conan_data["sources"][self.version]["mlas"], strip_root=True,
+        get(self, **version_data["mlas"], strip_root=True,
             destination=f"{self.source_folder}/src/plugins/intel_cpu/thirdparty/mlas")
-        get(self, **self.conan_data["sources"][self.version]["arm_compute"], strip_root=True,
+        get(self, **version_data["arm_compute"], strip_root=True,
             destination=f"{self.source_folder}/src/plugins/intel_cpu/thirdparty/ComputeLibrary")
-        get(self, **self.conan_data["sources"][self.version]["onednn_gpu"], strip_root=True,
+        get(self, **version_data["onednn_gpu"], strip_root=True,
             destination=f"{self.source_folder}/src/plugins/intel_gpu/thirdparty/onednn_gpu")
+        level_zero = version_data.get("level-zero")
+        if level_zero:
+            get(self, **level_zero, strip_root=True,
+                destination=f"{self.source_folder}/src/plugins/intel_npu/thirdparty/level-zero")
+            get(self, **version_data["level-zero-ext"], strip_root=True,
+                destination=f"{self.source_folder}/src/plugins/intel_npu/thirdparty/level-zero-ext")
         rmdir(self, f"{self.source_folder}/src/plugins/intel_gpu/thirdparty/rapidjson")
         apply_conandata_patches(self)
 
@@ -149,6 +158,8 @@ class OpenvinoConan(ConanFile):
             del self.options.fPIC
         if not self._gpu_option_available:
             del self.options.enable_gpu
+        if not self._npu_option_available:
+            del self.options.enable_npu
 
     def configure(self):
         if self.options.shared:
@@ -205,11 +216,11 @@ class OpenvinoConan(ConanFile):
         toolchain.cache_variables["ENABLE_INTEL_CPU"] = self.options.enable_cpu
         if self._gpu_option_available:
             toolchain.cache_variables["ENABLE_INTEL_GPU"] = self.options.enable_gpu
-            toolchain.cache_variables["ENABLE_ONEDNN_FOR_GPU"] = self.options.shared or not self.options.enable_cpu
+            toolchain.cache_variables["ENABLE_ONEDNN_FOR_GPU"] = self.options.enable_gpu
         if self._gna_option_available:
             toolchain.cache_variables["ENABLE_INTEL_GNA"] = False
         if self._npu_option_available:
-            toolchain.cache_variables["ENABLE_INTEL_NPU"] = False
+            toolchain.cache_variables["ENABLE_INTEL_NPU"] = self.options.enable_npu
         # SW plugins
         toolchain.cache_variables["ENABLE_AUTO"] = self.options.enable_auto
         toolchain.cache_variables["ENABLE_MULTI"] = self.options.enable_auto
@@ -275,14 +286,6 @@ class OpenvinoConan(ConanFile):
         if self.settings.build_type == "Debug":
             raise ConanInvalidConfiguration(f"{self.ref} does not support Debug build type")
 
-    def validate(self):
-        if self.options.get_safe("enable_gpu") and not self.options.shared and self.options.enable_cpu:
-            # GPU and CPU plugins cannot be simultaneously built statically, because they use different oneDNN versions
-            self.output.warning(f"{self.name} recipe builds GPU plugin without oneDNN (dGPU) support during static build, "
-                                "because CPU plugin compiled with different oneDNN version may cause ODR violation. "
-                                "To enable oneDNN support for GPU plugin, please, either use shared build configuration "
-                                "or disable CPU plugin by setting 'enable_cpu' option to False.")
-
     def build(self):
         cmake = CMake(self)
         cmake.configure()
@@ -329,9 +332,12 @@ class OpenvinoConan(ConanFile):
                     openvino_runtime.libs.append("arm_compute-static")
             if self.options.get_safe("enable_gpu"):
                 openvino_runtime.libs.extend(["openvino_intel_gpu_plugin", "openvino_intel_gpu_graph",
-                                              "openvino_intel_gpu_runtime", "openvino_intel_gpu_kernels"])
-                if not self.options.enable_cpu:
-                    openvino_runtime.libs.append("openvino_onednn_gpu")
+                                              "openvino_intel_gpu_runtime", "openvino_intel_gpu_kernels",
+                                              "openvino_onednn_gpu"])
+            if self.options.get_safe("enable_npu"):
+                openvino_runtime.libs.extend(["openvino_intel_npu_plugin", "openvino_npu_level_zero_backend",
+                    "openvino_npu_driver_compiler_adapter", "openvino_npu_al", "openvino_npu_zero_result_parser",
+                    "openvino_npu_logger_utils"])
             # SW plugins
             if self.options.enable_auto:
                 openvino_runtime.libs.append("openvino_auto_plugin")

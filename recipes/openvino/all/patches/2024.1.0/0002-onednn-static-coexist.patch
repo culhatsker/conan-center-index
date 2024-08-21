@@ -1,0 +1,108 @@
+commit d36e3d4be234e550454e031ff445e0323622a43b
+Author: Ilya Lavrenov <ilya.lavrenov@intel.com>
+Date:   Thu Aug 8 21:29:30 2024 +0400
+
+    Static build with both oneDNNs from CPU and GPU (#25962)
+    
+    ### Details:
+     - *item1*
+     - *...*
+    
+    ### Tickets:
+     - 148704
+
+diff --git a/cmake/features.cmake b/cmake/features.cmake
+index 5b53c1a435..ae8730da59 100644
+--- a/cmake/features.cmake
++++ b/cmake/features.cmake
+@@ -34,9 +34,8 @@ endif()
+ 
+ ov_dependent_option (ENABLE_INTEL_GPU "GPU OpenCL-based plugin for OpenVINO Runtime" ${ENABLE_INTEL_GPU_DEFAULT} "X86_64 OR AARCH64;NOT APPLE;NOT WINDOWS_STORE;NOT WINDOWS_PHONE" OFF)
+ 
+-if (ANDROID OR MINGW OR (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0) OR (NOT BUILD_SHARED_LIBS AND ENABLE_INTEL_CPU))
+-    # oneDNN doesn't support old compilers and android builds for now, so we'll build GPU plugin without oneDNN
+-    # also, in case of static build CPU's and GPU's oneDNNs will conflict, so we are disabling GPU's one in this case
++if (ANDROID OR MINGW OR (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
++    # oneDNN doesn't support old compilers and Android builds for now, so we'll build GPU plugin without oneDNN
+     set(ENABLE_ONEDNN_FOR_GPU_DEFAULT OFF)
+ else()
+     set(ENABLE_ONEDNN_FOR_GPU_DEFAULT ON)
+diff --git a/src/plugins/intel_cpu/CMakeLists.txt b/src/plugins/intel_cpu/CMakeLists.txt
+index 074d4fd6c3..2ad841060f 100644
+--- a/src/plugins/intel_cpu/CMakeLists.txt
++++ b/src/plugins/intel_cpu/CMakeLists.txt
+@@ -30,6 +30,60 @@ elseif(OV_COMPILER_IS_CLANG)
+     endif()
+ endif()
+ 
++if(NOT BUILD_SHARED_LIBS)
++    # Symbols are located in both src and include folders
++    file(GLOB_RECURSE onednn_files
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/include/*.cpp"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/include/*.hpp"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/include/*.h"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/include/*.hpp"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/src/*.cpp"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/src/*.hpp"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/src/*.h"
++        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/onednn/src/*.hpp")
++
++    # parse API symbols
++    foreach(onednn_file IN LISTS onednn_files)
++        # symbols in form:
++        # dnnl_status_t DNNL_API dnnl_engine_get_kind
++        file(STRINGS "${onednn_file}" onednn_symbols_defined_on_single_line
++             REGEX "DNNL_API[ \*]*dnnl[a-zA-Z0-9_]*")
++        # symbols in form (cmake has issue with symbols defined on multiple lines and we have to use new pattern):
++        # dnnl_status_t DNNL_API
++        # dnnl_engine_get_kind
++        file(STRINGS "${onednn_file}" onednn_symbols_defined_on_multiple_lines
++             REGEX "^dnnl[a-zA-Z0-9_]*\\(")
++        # symbols in form:
++        # typedef struct dnnl_graph_graph *dnnl_graph_graph_t;
++        file(STRINGS "${onednn_file}" onednn_symbols_typedef
++             REGEX "^typedef struct dnnl_.*")
++
++        if(onednn_symbols_defined_on_single_line OR
++           onednn_symbols_defined_on_multiple_lines OR
++           onednn_symbols_typedef)
++            # parse concrete symbols from read line
++            string(REGEX MATCHALL "dnnl[a-zA-Z0-9_]+" onednn_parsed_symbols
++                ${onednn_symbols_defined_on_single_line}
++                ${onednn_symbols_defined_on_multiple_lines}
++                ${onednn_symbols_typedef})
++            list(APPEND onednn_symbols ${onednn_parsed_symbols})
++        endif()
++    endforeach()
++
++    # remove all duplicates
++    list(REMOVE_DUPLICATES onednn_symbols)
++
++    # also override namespaces
++    list(APPEND onednn_symbols dnnl oneapi)
++
++    # redefine all collected symbols
++    foreach(onednn_symbol IN LISTS onednn_symbols)
++        if(NOT onednn_symbol MATCHES "^#.+")
++            add_compile_definitions(${onednn_symbol}=ov_cpu_${onednn_symbol})
++        endif()
++    endforeach()
++endif()
++
+ if (AARCH64 AND NOT APPLE AND CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10.2)
+     # according to https://github.com/ARM-software/ComputeLibrary/issues/1053#issuecomment-1846903707 comment
+     # the 'multi_isa=1' below enables FP32, FP16 and SVE / SVE2 kernels
+diff --git a/src/plugins/intel_gpu/CMakeLists.txt b/src/plugins/intel_gpu/CMakeLists.txt
+index 2f3d9127dd..23b9b4e8b1 100644
+--- a/src/plugins/intel_gpu/CMakeLists.txt
++++ b/src/plugins/intel_gpu/CMakeLists.txt
+@@ -30,6 +30,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+     ov_add_compiler_flags(/wd4244)
+     # '<': signed/unsigned mismatch
+     ov_add_compiler_flags(/wd4018)
++
++    # see https://github.com/oneapi-src/oneDNN/issues/2028
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus")
+ endif()
+ 
+ if(ENABLE_GPU_DEBUG_CAPS)

@@ -15,6 +15,12 @@ sources:
     "onednn_gpu":
       url: "https://github.com/oneapi-src/oneDNN/archive/7ab8ee9adda866d675edeee7a3a6a29b2d0a1572.tar.gz"
       sha256: "66363988363744e49fff55f4fcdb72318ff3f35fba6da68302c1662c837c22ac"
+    "level-zero":
+      url: "https://github.com/oneapi-src/level-zero/archive/4ed13f327d3389285592edcf7598ec3cb2bc712e.tar.gz"
+      sha256: "e9fe67f792c7d8f0243eef6ad4e3bb0bb484cc5dfa6790c4fe13289d4fc4df2c"
+    "level-zero-ext":
+      url: "https://github.com/intel/level-zero-npu-extensions/archive/16c85231a82ee1a0b06ed7ab7da3f411a0878ed7.tar.gz"
+      sha256: "cde001be74324d8370d4dcdb8457afe5a6a1b3a958b05190819ffe62f25c2971"
   "2024.2.0":
     "openvino":
       url: "https://github.com/openvinotoolkit/openvino/archive/refs/tags/2024.2.0.tar.gz"
@@ -31,6 +37,12 @@ sources:
     "onednn_gpu":
       url: "https://github.com/oneapi-src/oneDNN/archive/37f48519b87cf8b5e5ef2209340a1948c3e87d72.tar.gz"
       sha256: "58131e094408460f88bf941977b5206232dc2bc8dbf227250d1e2236b43153a5"
+    "level-zero":
+      url: "https://github.com/oneapi-src/level-zero/archive/4ed13f327d3389285592edcf7598ec3cb2bc712e.tar.gz"
+      sha256: "e9fe67f792c7d8f0243eef6ad4e3bb0bb484cc5dfa6790c4fe13289d4fc4df2c"
+    "level-zero-ext":
+      url: "https://github.com/intel/level-zero-npu-extensions/archive/d490a130fbb80e600b3aed3886c305abcb60d77c.tar.gz"
+      sha256: "05c6927fdb338efa4cd17a2f5fe3fb0785a5f5c2ef3be02c51dc9e1e9163cd12"
   "2024.1.0":
     "openvino":
       url: "https://github.com/openvinotoolkit/openvino/archive/refs/tags/2024.1.0.tar.gz"
@@ -47,6 +59,12 @@ sources:
     "onednn_gpu":
       url: "https://github.com/oneapi-src/oneDNN/archive/4e6ff043c439652fcf6c400ac4e0c81bbac7c71c.tar.gz"
       sha256: "c3543d560fbbb7297df91c191cc9bf682322c5554302e256f1bf4a757424a331"
+    "level-zero":
+      url: "https://github.com/oneapi-src/level-zero/archive/4ed13f327d3389285592edcf7598ec3cb2bc712e.tar.gz"
+      sha256: "e9fe67f792c7d8f0243eef6ad4e3bb0bb484cc5dfa6790c4fe13289d4fc4df2c"
+    "level-zero-ext":
+      url: "https://github.com/intel/level-zero-npu-extensions/archive/0e1c471356a724ef6d176ba027a68e210d90939e.tar.gz"
+      sha256: "66f8b5a1ff7e9b404470f76c17ea9c35ecdca506b0fdc37540766b46ca2f085d"
   "2024.0.0":
     "openvino":
       url: "https://github.com/openvinotoolkit/openvino/archive/refs/tags/2024.0.0.tar.gz"
@@ -96,11 +114,25 @@ sources:
       url: "https://github.com/oneapi-src/oneDNN/archive/284ad4574939fa784e4ddaa1f4aa577b8eb7a017.tar.gz"
       sha256: "16f36078339cd08b949efea1d863344cb0b742d9f5898937d07a591b0c4da517"
 patches:
+  "2024.3.0":
+    - patch_file: "patches/2024.3.0/0001-onednn-static-coexist.patch"
+      patch_description: "Fix cpu plugin and gpu plugin flavours of oneDNN coexistence for static linking"
+      patch_type: "portability"
+      patch_source: "https://github.com/openvinotoolkit/openvino/pull/25962"
+  "2024.2.0":
+    - patch_file: "patches/2024.2.0/0001-onednn-static-coexist.patch"
+      patch_description: "Fix cpu plugin and gpu plugin flavours of oneDNN coexistence for static linking"
+      patch_type: "portability"
+      patch_source: "https://github.com/openvinotoolkit/openvino/pull/25962"
   "2024.1.0":
     - patch_file: "patches/2024.1.0/0001-fix-cxxflags.patch"
       patch_description: "Fix build failure when explicitly passing different gcc ABI via cxx flags"
       patch_type: "portability"
       patch_source: "https://github.com/openvinotoolkit/openvino/pull/24274"
+    - patch_file: "patches/2024.1.0/0002-onednn-static-coexist.patch"
+      patch_description: "Fix cpu plugin and gpu plugin flavours of oneDNN coexistence for static linking"
+      patch_type: "portability"
+      patch_source: "https://github.com/openvinotoolkit/openvino/pull/25962"
   "2024.0.0":
     - patch_file: "patches/2024.0.0/0001-Include-mutex-for-std-call_once.patch"
       patch_description: "Include mutex for std::call_once"
@@ -114,6 +146,15 @@ patches:
       patch_description: "Add support to OpenVINO to build it with standards newer than cpp11"
       patch_type: "portability"
       patch_source: "https://github.com/openvinotoolkit/openvino/pull/22784"
+    - patch_file: "patches/2024.0.0/0004-onednn-static-coexist.patch"
+      patch_description: "Fix cpu plugin and gpu plugin flavours of oneDNN coexistence for static linking"
+      patch_type: "portability"
+      patch_source: "https://github.com/openvinotoolkit/openvino/pull/25962"
+  "2023.3.0":
+    - patch_file: "patches/2023.3.0/0001-onednn-static-coexist.patch"
+      patch_description: "Fix cpu plugin and gpu plugin flavours of oneDNN coexistence for static linking"
+      patch_type: "portability"
+      patch_source: "https://github.com/openvinotoolkit/openvino/pull/25962"
   "2023.2.0":
     - patch_file: "patches/2023.2.0/0001-git-version.patch"
       patch_description: "Fixed issue with version on Windows"
