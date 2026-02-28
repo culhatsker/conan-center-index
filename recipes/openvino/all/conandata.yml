@@ -18,6 +18,9 @@ sources:
     "onednn_gpu":
       url: "https://github.com/oneapi-src/oneDNN/archive/refs/tags/v3.11.tar.gz"
       sha256: "04df98b18300daf6c3aa7cc2d5e7ce8a8f430fed1787151daed0254d8dd4e64e"
+    "npu_extensions":
+      url: "https://github.com/intel/level-zero-npu-extensions/archive/8404c63a88d182726038d2b07c219731dada9c21.tar.gz"
+      sha256: "b72a46a1e66da3c804cdf08ba493e2cd2ee617e1dccf6cc6c69d1baf63f37973"
   "2025.4.0":
     "openvino":
       url: "https://github.com/openvinotoolkit/openvino/archive/refs/tags/2025.4.0.tar.gz"
@@ -37,6 +40,9 @@ sources:
     "onednn_gpu":
       url: "https://github.com/oneapi-src/oneDNN/archive/29d64fe0ec0f1f20d7f80aa76630d58a6011a869.tar.gz"
       sha256: "90139a1193b9773f94ff3310cd6118d3b6ccf1adb24461c84aa87890caa5ee77"
+    "npu_extensions":
+      url: "https://github.com/intel/level-zero-npu-extensions/archive/61e4aeb00afd2a5b6955986269eed3a713c7b562.tar.gz"
+      sha256: "ccfd713b62700cf82476ee550c269cb5fb7edad70e96e7e0f4f6d7888f64642c"
   "2024.6.0":
     "openvino":
       url: "https://github.com/openvinotoolkit/openvino/archive/refs/tags/2024.6.0.tar.gz"
@@ -53,9 +59,13 @@ sources:
     "onednn_gpu":
       url: "https://github.com/oneapi-src/oneDNN/archive/0f269193c7466313888d3338209d0d06a22cc6fa.tar.gz"
       sha256: "abad1ff4ac138c593b7a927ef2099b01447af1f7364848392a950ba17b32bcd8"
+    "npu_extensions":
+      url: "https://github.com/intel/level-zero-npu-extensions/archive/a6487cc2c5da9aa13db9e005a320a1b6a0ee5919.tar.gz"
+      sha256: "1e7b4140eed15aec2be36075a322e352013292b28e842608476e9d1ce3b77959"
 patches:
   "2026.0.0":
     - patch_file: "patches/2026.0.0-gpu-wnoerror-for-debug-build.patch"
+    - patch_file: "patches/2026.0.0-ze-loader-findpackage.patch"
   "2025.4.0":
     - patch_file: "patches/2025.4.0-CPU-ARM-Define-HWCAP2_I8MM-constant-properly-33060.patch"
   "2025.2.0":

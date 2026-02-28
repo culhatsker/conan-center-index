@@ -113,6 +113,8 @@ class OpenvinoConan(ConanFile):
             destination=f"{self.source_folder}/src/plugins/intel_cpu/thirdparty/ComputeLibrary")
         get(self, **self.conan_data["sources"][self.version]["onednn_gpu"], strip_root=True,
             destination=f"{self.source_folder}/src/plugins/intel_gpu/thirdparty/onednn_gpu")
+        get(self, **self.conan_data["sources"][self.version]["npu_extensions"], strip_root=True,
+            destination=f"{self.source_folder}/src/plugins/intel_npu/thirdparty/level-zero-ext")
         if Version(self.version) >= "2025.1.0":
             get(self, **self.conan_data["sources"][self.version]["arm_kleidiai"], strip_root=True,
                 destination=f"{self.source_folder}/src/plugins/intel_cpu/thirdparty/kleidiai")
@@ -157,6 +159,9 @@ class OpenvinoConan(ConanFile):
         if self.options.get_safe("enable_gpu"):
             self.requires("opencl-icd-loader/2023.04.17")
             self.requires("rapidjson/cci.20220822")
+        # if enable_npu, TODO: upgrade to v1.27
+        self.requires("level-zero/1.27.0")
+        
         if self._protobuf_required:
             self.requires("protobuf/3.21.12")
         if self.options.enable_tf_frontend:
@@ -181,7 +186,8 @@ class OpenvinoConan(ConanFile):
         if self._gpu_option_available:
             toolchain.cache_variables["ENABLE_INTEL_GPU"] = self.options.enable_gpu
             toolchain.cache_variables["ENABLE_ONEDNN_FOR_GPU"] = self.options.enable_gpu
-        toolchain.cache_variables["ENABLE_INTEL_NPU"] = False
+        toolchain.cache_variables["ENABLE_INTEL_NPU"] = True  # TODO: self.options.enable_npu
+        toolchain.cache_variables["ENABLE_INTEL_NPU_INTERNAL"] = False
         # SW plugins
         toolchain.cache_variables["ENABLE_AUTO"] = self.options.enable_auto
         toolchain.cache_variables["ENABLE_MULTI"] = self.options.enable_auto
@@ -199,6 +205,10 @@ class OpenvinoConan(ConanFile):
         toolchain.cache_variables["ENABLE_SYSTEM_TBB"] = True
         toolchain.cache_variables["ENABLE_TBBBIND_2_5"] = False
         toolchain.cache_variables["ENABLE_SYSTEM_PUGIXML"] = True
+
+        # if enable_npu
+        toolchain.cache_variables["ENABLE_SYSTEM_LEVEL_ZERO"] = True
+
         if self._protobuf_required:
             toolchain.cache_variables["ENABLE_SYSTEM_PROTOBUF"] = True
         if self.options.enable_tf_frontend:
@@ -308,6 +318,9 @@ class OpenvinoConan(ConanFile):
                     libname("openvino_intel_gpu_kernels"),
                     libname("openvino_onednn_gpu")
                 ])
+            # if enable_npu
+            openvino_runtime.libs.extend([libname("openvino_intel_npu_plugin")])
+
             # SW plugins
             if self.options.enable_auto:
                 openvino_runtime.libs.append(libname("openvino_auto_plugin"))
@@ -358,6 +371,8 @@ class OpenvinoConan(ConanFile):
             openvino_runtime.requires.extend(["opencl-icd-loader::opencl-icd-loader", "rapidjson::rapidjson"])
             if self.settings.os == "Windows":
                 openvino_runtime.system_libs.append("setupapi")
+        # if enable_npu
+        openvino_runtime.requires.extend(["LevelZero::LevelZero", "ze_loader"])
 
         openvino_runtime_c = self.cpp_info.components["Runtime_C"]
         openvino_runtime_c.set_property("cmake_target_name", "openvino::runtime::c")
